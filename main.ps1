@@ -1,4 +1,3 @@
-<# Import-Module .\getDestinationPath.ps1 #>
 
 $Downloads_Path = (New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path
 
