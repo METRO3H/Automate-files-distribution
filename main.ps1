@@ -1,12 +1,13 @@
 <# Import-Module .\getDestinationPath.ps1 #>
 
-$downloadsPath = (New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path
+$Downloads_Path = (New-Object -ComObject Shell.Application).NameSpace('shell:Downloads').Self.Path
 
-$watcher = New-Object System.IO.FileSystemWatcher
-$watcher.Path = $downloadsPath
-$watcher.Filter = "*.*"
-$watcher.IncludeSubdirectories = $false
-$watcher.EnableRaisingEvents = $true
+$Watcher = New-Object System.IO.FileSystemWatcher
+$Watcher.Path = $Downloads_Path
+$Watcher.Filter = "*.*"
+$Watcher.NotifyFilter = [System.IO.NotifyFilters]::FileName
+$Watcher.IncludeSubdirectories = $false
+$Watcher.EnableRaisingEvents = $true
 
 $File_Extensions = @{
     #Videos
@@ -26,17 +27,10 @@ $File_Extensions = @{
     ".torrent" = "Torrents"                    
 }
 
-$action = {
-    $file = $Event.SourceEventArgs.Name
-    $fileFullPath = Join-Path -Path $downloadsPath -ChildPath $file
-    $changeType = $Event.SourceEventArgs.ChangeType
-
-    # Check if the event is for a file creation
-    if (-not(Test-Path -Path $fileFullPath -PathType Leaf)) {
-        Write-Host "The triggered event is not caused by a file. Event Path : "$fileFullPath
-        return
-    }
-    $extension = [System.IO.Path]::GetExtension($fileFullPath)
+$Action = {
+    $File_Name = [System.Management.Automation.WildcardPattern]::Escape($Event.SourceEventArgs.Name)
+    $Origin_File_Full_Path = Join-Path -Path $Downloads_Path -ChildPath $File_Name
+    $extension = [System.IO.Path]::GetExtension($Origin_File_Full_Path)
 
     $Type_Folder = ""
 
@@ -49,41 +43,46 @@ $action = {
         $Type_Folder = "Other"
     }
 
-    $destinationPath = Join-Path -Path "C:\bob" -ChildPath $Type_Folder
+    $Destination_Path = Join-Path -Path $Downloads_Path -ChildPath $Type_Folder
 
-    if (-not (Test-Path -Path $destinationPath)) {
-        New-Item -ItemType Directory -Path $destinationPath | Out-Null
+    if($Type_Folder -eq "Torrents"){
+        $Destination_Path = "F:\Torrents"
     }
 
-    $destinationFileFullPath = Join-Path -Path $destinationPath -ChildPath $file
-    $iterator = 2
-    while (Test-Path -Path $destinationFileFullPath) {
-        Write-Host "File already exists in the destination folder: $file"
-        # File already exists in the destination folder, rename the file
-        $newFileName = [System.IO.Path]::GetFileNameWithoutExtension($file) + " ($iterator)$extension"
-        $destinationFileFullPath = Join-Path -Path $destinationPath -ChildPath $newFileName
+    if (-not (Test-Path -Path $Destination_Path)) {
+        New-Item -ItemType Directory -Path $Destination_Path | Out-Null
+    }
 
-        $iterator = $iterator + 1
+    $Destination_File_Full_Path = Join-Path -Path $Destination_Path -ChildPath $File_Name
+    $Iterator = 2
+    while (Test-Path -Path $Destination_File_Full_Path) {
+        Write-Host "# [$File_Name] File already exists in the destination folder."
+        # File already exists in the destination folder, rename the file
+        $New_File_Name = [System.IO.Path]::GetFileNameWithoutExtension($File_Name) + " ($Iterator)$extension"
+        $Destination_File_Full_Path = Join-Path -Path $Destination_Path -ChildPath $New_File_Name
+
+        $Iterator = $Iterator + 1
     }
 
     do {
                  
         try {
-            Move-Item -Path $fileFullPath -Destination $destinationFileFullPath -Force
-            Write-Host "File '$file' moved successfully from '$fileFullPath' to '$destinationFileFullPath'"
+            Move-Item -Path $Origin_File_Full_Path -Destination $Destination_File_Full_Path -Force
         }
-        catch [System.IO.IOException] {
-            Write-Host "Sharing violation occurred while moving the file: $file"
-            Write-Host "Retrying after a short delay..."
+        catch  {
+            Write-Host "An error occurred:"
+            Write-Host $_
             Start-Sleep -Seconds 1
         }
 
 
-    } while (-not (Test-Path -Path $destinationFileFullPath))
+    } while (-not (Test-Path -Path $Destination_File_Full_Path))
+
+    Write-Host "# [$File_Name] File moved successfully from '$Origin_File_Full_Path' to '$Destination_File_Full_Path'"
 
 }
 
-Register-ObjectEvent -InputObject $watcher -EventName Created -Action $action
+Register-ObjectEvent -InputObject $Watcher -EventName Created -Action $Action
 
 while ($true) {
     Start-Sleep -Seconds 1
