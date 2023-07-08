@@ -32,28 +32,14 @@ $Action = {
     $Origin_File_Full_Path = Join-Path -Path $Downloads_Path -ChildPath $File_Name
     $extension = [System.IO.Path]::GetExtension($Origin_File_Full_Path)
 
-    $Type_Folder = ""
+    $Contains_Extension = $File_Extensions.ContainsKey($extension)
+    $Type_Folder = if ($Contains_Extension -eq $true) { $File_Extensions[$extension] } else { "Other" }
+    $Destination_Path = if (-not($Type_Folder -eq "Torrents")) { Join-Path -Path $Downloads_Path -ChildPath $Type_Folder } else { "F:\Torrents" }    
 
-    if ($File_Extensions.ContainsKey($extension)) {
-
-        $Type_Folder = $File_Extensions[$extension]
-
-    }
-    else {
-        $Type_Folder = "Other"
-    }
-
-    $Destination_Path = Join-Path -Path $Downloads_Path -ChildPath $Type_Folder
-
-    if($Type_Folder -eq "Torrents"){
-        $Destination_Path = "F:\Torrents"
-    }
-
-    if (-not (Test-Path -Path $Destination_Path)) {
-        New-Item -ItemType Directory -Path $Destination_Path | Out-Null
-    }
+    if (-not (Test-Path -Path $Destination_Path)) { New-Item -ItemType Directory -Path $Destination_Path | Out-Null }
 
     $Destination_File_Full_Path = Join-Path -Path $Destination_Path -ChildPath $File_Name
+    
     $Iterator = 2
     while (Test-Path -Path $Destination_File_Full_Path) {
         Write-Host "# [$File_Name] File already exists in the destination folder."
@@ -64,22 +50,12 @@ $Action = {
         $Iterator = $Iterator + 1
     }
 
-    do {
-                 
-        try {
-            Move-Item -Path $Origin_File_Full_Path -Destination $Destination_File_Full_Path -Force
-        }
-        catch  {
-            Write-Host "An error occurred:"
-            Write-Host $_
-            Start-Sleep -Seconds 1
-        }
-
-
+    do { 
+         try { Move-Item -Path $Origin_File_Full_Path -Destination $Destination_File_Full_Path -Force }
+         catch  { Write-Host "An error occurred:" ; Write-Host $_ ; Start-Sleep -Seconds 1 }
     } while (-not (Test-Path -Path $Destination_File_Full_Path))
 
-    Write-Host "# [$File_Name] File moved successfully from '$Origin_File_Full_Path' to '$Destination_File_Full_Path'"
-
+    Write-Host "# [$File_Name] File moved successfully from '$Origin_File_Full_Path' to '$Destination_File_Full_Path'`n"
 }
 
 Register-ObjectEvent -InputObject $Watcher -EventName Created -Action $Action
@@ -87,4 +63,3 @@ Register-ObjectEvent -InputObject $Watcher -EventName Created -Action $Action
 while ($true) {
     Start-Sleep -Seconds 1
 }
-
