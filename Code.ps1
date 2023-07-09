@@ -39,11 +39,11 @@ $Action = {
 
     $Destination_File_Full_Path = Join-Path -Path $Destination_Path -ChildPath $File_Name
     
-    $Iterator = 2
+    $Iterator = 1
     while (Test-Path -Path $Destination_File_Full_Path) {
         Write-Host "# [$File_Name] File already exists in the destination folder."
-        # File already exists in the destination folder, rename the file
-        $New_File_Name = [System.IO.Path]::GetFileNameWithoutExtension($File_Name) + " ($Iterator)$extension"
+        $New_File_Name = [System.IO.Path]::GetFileNameWithoutExtension($File_Name) + " - Copy ($Iterator)$extension"
+        
         $Destination_File_Full_Path = Join-Path -Path $Destination_Path -ChildPath $New_File_Name
 
         $Iterator = $Iterator + 1

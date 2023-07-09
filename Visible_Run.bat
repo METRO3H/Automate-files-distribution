@@ -1,1 +1,0 @@
-powershell.exe -File "%cd%\code.ps1"
