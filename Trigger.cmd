@@ -1,1 +1,0 @@
-start /B /MIN powershell -command ".'%cd%\code.ps1'"

@@ -1,0 +1,1 @@
+powershell.exe -WindowStyle Hidden -File "%cd%\code.ps1"
